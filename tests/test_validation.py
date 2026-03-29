@@ -228,3 +228,37 @@ class TestValidateRecipients:
             pytest.raises(HimalayaError, match=r"claude_desktop_config\.json"),
         ):
             validate_recipients("To: unknown@test.com\nSubject: Hi\n\nBody")
+
+    def test_error_message_does_not_leak_approved_list(self):
+        with (
+            patch.dict(os.environ, {"APPROVED_RECIPIENTS": "secret@corp.com"}),
+            pytest.raises(HimalayaError) as exc_info,
+        ):
+            validate_recipients("To: attacker@evil.com\nSubject: Hi\n\nBody")
+        assert "secret@corp.com" not in str(exc_info.value)
+
+    def test_reply_to_validated(self):
+        with (
+            patch.dict(os.environ, {"APPROVED_RECIPIENTS": "alice@example.com"}),
+            pytest.raises(HimalayaError, match="not approved"),
+        ):
+            validate_recipients(
+                "To: alice@example.com\nReply-To: attacker@evil.com\nSubject: Hi\n\nBody"
+            )
+
+    def test_reply_to_approved_passes(self):
+        with patch.dict(os.environ, {"APPROVED_RECIPIENTS": "alice@example.com,bob@example.com"}):
+            validate_recipients(
+                "To: alice@example.com\nReply-To: bob@example.com\nSubject: Hi\n\nBody"
+            )
+
+    def test_folded_header_parsed(self):
+        with patch.dict(os.environ, {"APPROVED_RECIPIENTS": "alice@example.com,bob@example.com"}):
+            validate_recipients("To: alice@example.com,\n bob@example.com\nSubject: Hi\n\nBody")
+
+    def test_folded_header_unapproved_caught(self):
+        with (
+            patch.dict(os.environ, {"APPROVED_RECIPIENTS": "alice@example.com"}),
+            pytest.raises(HimalayaError, match="not approved"),
+        ):
+            validate_recipients("To: alice@example.com,\n evil@attacker.com\nSubject: Hi\n\nBody")

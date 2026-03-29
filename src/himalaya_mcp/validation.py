@@ -109,20 +109,43 @@ def validate_page_size(page_size: int | None) -> int | None:
     return page_size
 
 
+_RECIPIENT_HEADERS = ("to:", "cc:", "bcc:", "reply-to:")
+
+
 def _parse_recipients(message_content: str) -> list[str]:
-    """Extract all recipient email addresses from To, Cc, and Bcc headers."""
+    """Extract all recipient email addresses from To, Cc, Bcc, and Reply-To headers.
+
+    Handles RFC 5322 header folding (continuation lines starting with space/tab).
+    """
     recipients: list[str] = []
+    current_header: str | None = None
+
     for line in message_content.splitlines():
-        lower = line.lower()
-        if lower.startswith(("to:", "cc:", "bcc:")):
-            header_value = line.split(":", 1)[1]
-            parsed = email.utils.getaddresses([header_value])
+        if line.startswith((" ", "\t")) and current_header is not None:
+            current_header += " " + line.strip()
+            continue
+
+        if current_header is not None:
+            parsed = email.utils.getaddresses([current_header])
             for _name, addr in parsed:
                 addr = addr.strip().lower()
                 if addr:
                     recipients.append(addr)
-        elif not line.startswith((" ", "\t")) and ":" not in line:
+            current_header = None
+
+        lower = line.lower()
+        if any(lower.startswith(h) for h in _RECIPIENT_HEADERS):
+            current_header = line.split(":", 1)[1]
+        elif ":" not in line:
             break
+
+    if current_header is not None:
+        parsed = email.utils.getaddresses([current_header])
+        for _name, addr in parsed:
+            addr = addr.strip().lower()
+            if addr:
+                recipients.append(addr)
+
     return recipients
 
 
@@ -160,11 +183,9 @@ def validate_recipients(message_content: str) -> None:
     unapproved = [addr for addr in recipients if addr not in approved]
     if unapproved:
         unapproved_str = ", ".join(unapproved)
-        approved_str = ", ".join(sorted(approved))
         raise HimalayaError(
             f"Cannot send email: the following recipients are not approved: "
             f"{unapproved_str}. "
-            f"Currently approved recipients: {approved_str}. "
             f"To add new recipients, update the APPROVED_RECIPIENTS environment "
             f"variable in your MCP server configuration (claude_desktop_config.json)."
         )
