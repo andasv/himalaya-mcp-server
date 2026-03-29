@@ -1,7 +1,11 @@
 import json
+import logging
 import shutil
 import subprocess
+import time
 from typing import Any
+
+logger = logging.getLogger("himalaya_mcp")
 
 
 class HimalayaError(Exception):
@@ -42,12 +46,17 @@ def run(
 
     if output_json:
         cmd.extend(["--output", "json"])
+
+    cmd.extend(args)
+
     if account:
         cmd.extend(["--account", account])
     if folder:
         cmd.extend(["--folder", folder])
 
-    cmd.extend(args)
+    cmd_str = " ".join(args)
+    logger.info("[run] starting: %s", cmd_str)
+    start = time.monotonic()
 
     try:
         result = subprocess.run(
@@ -57,12 +66,19 @@ def run(
             timeout=30,
         )
     except subprocess.TimeoutExpired as exc:
-        raise HimalayaError(f"Command timed out: {' '.join(args)}") from exc
+        elapsed = time.monotonic() - start
+        logger.error("[run] TIMEOUT after %.1fs: %s", elapsed, cmd_str)
+        raise HimalayaError(f"Command timed out: {cmd_str}") from exc
     except OSError as exc:
+        logger.error("[run] OS error: %s — %s", cmd_str, exc)
         raise HimalayaError(f"Failed to execute himalaya: {exc}") from exc
+
+    elapsed = time.monotonic() - start
+    logger.info("[run] finished in %.1fs (rc=%d): %s", elapsed, result.returncode, cmd_str)
 
     if result.returncode != 0:
         stderr = result.stderr.strip()
+        logger.error("[run] stderr: %s", stderr[:500])
         raise HimalayaError(f"himalaya error: {stderr}")
 
     stdout = result.stdout.strip()
@@ -93,6 +109,11 @@ def run_raw(*args: str, stdin_data: str | None = None, timeout: int = 30) -> str
     binary = _find_binary()
     cmd = [binary, *args]
 
+    cmd_str = " ".join(args)
+    stdin_preview = f" (stdin: {len(stdin_data)} bytes)" if stdin_data else ""
+    logger.info("[run_raw] starting: %s%s (timeout=%ds)", cmd_str, stdin_preview, timeout)
+    start = time.monotonic()
+
     try:
         result = subprocess.run(
             cmd,
@@ -102,12 +123,19 @@ def run_raw(*args: str, stdin_data: str | None = None, timeout: int = 30) -> str
             timeout=timeout,
         )
     except subprocess.TimeoutExpired as exc:
-        raise HimalayaError(f"Command timed out: {' '.join(args)}") from exc
+        elapsed = time.monotonic() - start
+        logger.error("[run_raw] TIMEOUT after %.1fs: %s", elapsed, cmd_str)
+        raise HimalayaError(f"Command timed out: {cmd_str}") from exc
     except OSError as exc:
+        logger.error("[run_raw] OS error: %s — %s", cmd_str, exc)
         raise HimalayaError(f"Failed to execute himalaya: {exc}") from exc
+
+    elapsed = time.monotonic() - start
+    logger.info("[run_raw] finished in %.1fs (rc=%d): %s", elapsed, result.returncode, cmd_str)
 
     if result.returncode != 0:
         stderr = result.stderr.strip()
+        logger.error("[run_raw] stderr: %s", stderr[:500])
         raise HimalayaError(f"himalaya error: {stderr}")
 
     return result.stdout.strip()

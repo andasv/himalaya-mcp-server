@@ -87,7 +87,8 @@ Dangerzone mode **requires** the `APPROVED_RECIPIENTS` environment variable — 
       "args": ["run", "--project", "/path/to/himalaya-mcp-server", "himalaya-mcp-server"],
       "env": {
         "HIMALAYA_MODE": "dangerzone",
-        "APPROVED_RECIPIENTS": "alice@example.com,bob@example.com"
+        "APPROVED_RECIPIENTS": "alice@example.com,bob@example.com",
+        "HIMALAYA_SEND_TIMEOUT": "15"
       }
     }
   }
@@ -116,6 +117,14 @@ claude mcp add --env HIMALAYA_MODE=dangerzone --env APPROVED_RECIPIENTS=alice@ex
 | **readonly** (default) | `HIMALAYA_MODE=readonly` or unset | List accounts/folders/envelopes, read messages, download attachments, generate templates |
 | **full** | `HIMALAYA_MODE=full` | All of the above + move, copy, flag, create folders, save drafts |
 | **dangerzone** | `HIMALAYA_MODE=dangerzone` | All of the above + **send emails** |
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `HIMALAYA_MODE` | No | `readonly` | Operating mode: `readonly`, `full`, or `dangerzone` |
+| `APPROVED_RECIPIENTS` | In dangerzone | — | Comma-separated list of email addresses allowed as recipients |
+| `HIMALAYA_SEND_TIMEOUT` | No | `15` | Timeout in seconds for send operations. Himalaya retries SMTP 450 errors indefinitely, so this prevents hangs. Keep below 60s (Cowork's tool timeout). |
 
 ## Available Tools
 

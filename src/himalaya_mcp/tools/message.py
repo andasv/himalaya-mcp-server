@@ -1,4 +1,5 @@
 import json
+import logging
 
 from himalaya_mcp import cli
 from himalaya_mcp.validation import (
@@ -164,7 +165,10 @@ async def message_send(raw_message: str, account: str | None = None) -> str:
         raw_message: The raw MIME email content to send.
         account: Account name. If omitted, uses the default account.
     """
+    logger = logging.getLogger("himalaya_mcp")
+    logger.info("[message_send] validating message (%d bytes)", len(raw_message))
     raw_message = validate_template(raw_message)
+    logger.info("[message_send] validating recipients")
     validate_recipients(raw_message)
     account = validate_account(account)
 
@@ -172,5 +176,9 @@ async def message_send(raw_message: str, account: str | None = None) -> str:
     if account:
         args.extend(["--account", account])
 
-    result = cli.run_raw(*args, stdin_data=raw_message)
+    logger.info("[message_send] calling himalaya...")
+    from himalaya_mcp.types import SEND_TIMEOUT
+
+    result = cli.run_raw(*args, stdin_data=raw_message, timeout=SEND_TIMEOUT)
+    logger.info("[message_send] done")
     return result or "Message sent."

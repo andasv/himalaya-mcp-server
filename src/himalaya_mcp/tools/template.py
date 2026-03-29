@@ -1,3 +1,5 @@
+import logging
+
 from himalaya_mcp import cli
 from himalaya_mcp.validation import (
     validate_account,
@@ -136,7 +138,10 @@ async def template_send(
         template: The MML template content to compile and send.
         account: Account name. If omitted, uses the default account.
     """
+    logger = logging.getLogger("himalaya_mcp")
+    logger.info("[template_send] validating template (%d bytes)", len(template))
     template = validate_template(template)
+    logger.info("[template_send] validating recipients")
     validate_recipients(template)
     account = validate_account(account)
 
@@ -144,5 +149,9 @@ async def template_send(
     if account:
         args.extend(["--account", account])
 
-    result = cli.run_raw(*args, stdin_data=template)
+    logger.info("[template_send] calling himalaya...")
+    from himalaya_mcp.types import SEND_TIMEOUT
+
+    result = cli.run_raw(*args, stdin_data=template, timeout=SEND_TIMEOUT)
+    logger.info("[template_send] done")
     return result or "Email sent."
