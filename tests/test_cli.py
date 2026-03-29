@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from himalaya_mcp.cli import HimalayaError, run, run_raw
+from himalaya_mcp.cli import HimalayaError, _sanitize_stderr, run, run_raw
 from tests.conftest import make_completed_process
 
 
@@ -102,3 +102,44 @@ class TestBinaryNotFound:
             pytest.raises(HimalayaError, match="not found"),
         ):
             run_raw("template", "write")
+
+
+class TestSanitizeStderr:
+    def test_redacts_email_addresses(self):
+        stderr = "Failed to authenticate as user@example.com on imap.server.com"
+        result = _sanitize_stderr(stderr)
+        assert "user@example.com" not in result
+        assert "[REDACTED_EMAIL]" in result
+
+    def test_redacts_password(self):
+        stderr = "auth error: password=SuperSecret123 for account"
+        result = _sanitize_stderr(stderr)
+        assert "SuperSecret123" not in result
+        assert "[REDACTED]" in result
+
+    def test_redacts_token(self):
+        stderr = "oauth failed: token=eyJhbGciOiJSUzI1NiIsInR5c for user"
+        result = _sanitize_stderr(stderr)
+        assert "eyJhbGciOiJSUzI1NiIsInR5c" not in result
+
+    def test_preserves_safe_content(self):
+        stderr = "connection refused: cannot connect to server on port 993"
+        result = _sanitize_stderr(stderr)
+        assert result == stderr
+
+    def test_redacts_multiple_emails(self):
+        stderr = "from alice@test.com to bob@test.com failed"
+        result = _sanitize_stderr(stderr)
+        assert "alice@test.com" not in result
+        assert "bob@test.com" not in result
+        assert result.count("[REDACTED_EMAIL]") == 2
+
+    def test_error_message_is_sanitized(self, mock_subprocess, mock_which):
+        mock_subprocess.return_value = make_completed_process(
+            returncode=1,
+            stderr="auth failed for user@secret.com password=hunter2",
+        )
+        with pytest.raises(HimalayaError) as exc_info:
+            run("account", "list")
+        assert "user@secret.com" not in str(exc_info.value)
+        assert "hunter2" not in str(exc_info.value)

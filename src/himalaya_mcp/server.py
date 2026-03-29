@@ -1,3 +1,4 @@
+import logging
 import os
 
 from mcp.server.fastmcp import FastMCP
@@ -11,7 +12,12 @@ from himalaya_mcp.tools import (
     message,
     template,
 )
-from himalaya_mcp.types import DANGER_SEND, DANGER_WRITE, Mode
+from himalaya_mcp.types import DANGER_SEND, DANGER_WRITE, LOG_LEVEL, Mode
+
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.WARNING),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 _mode = Mode(os.environ.get("HIMALAYA_MODE", "readonly"))
 

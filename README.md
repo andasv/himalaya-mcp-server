@@ -125,6 +125,7 @@ claude mcp add --env HIMALAYA_MODE=dangerzone --env APPROVED_RECIPIENTS=alice@ex
 | `HIMALAYA_MODE` | No | `readonly` | Operating mode: `readonly`, `full`, or `dangerzone` |
 | `APPROVED_RECIPIENTS` | In dangerzone | — | Comma-separated list of email addresses allowed as recipients |
 | `HIMALAYA_SEND_TIMEOUT` | No | `15` | Timeout in seconds for send operations. Himalaya retries SMTP 450 errors indefinitely, so this prevents hangs. Keep below 60s (Cowork's tool timeout). |
+| `HIMALAYA_LOG_LEVEL` | No | `WARNING` | Log verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`. Logs never contain email content or credentials — stderr from himalaya CLI is sanitized before logging. |
 
 ## Available Tools
 

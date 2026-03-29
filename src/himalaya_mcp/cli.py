@@ -1,11 +1,25 @@
 import json
 import logging
+import re
 import shutil
 import subprocess
 import time
 from typing import Any
 
 logger = logging.getLogger("himalaya_mcp")
+
+_EMAIL_PATTERN = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
+_CREDENTIAL_PATTERNS = re.compile(
+    r"(password|passwd|token|secret|credential|auth|key)\s*[=:]\s*\S+",
+    re.IGNORECASE,
+)
+
+
+def _sanitize_stderr(stderr: str) -> str:
+    """Remove email addresses and credential-like patterns from stderr."""
+    sanitized = _EMAIL_PATTERN.sub("[REDACTED_EMAIL]", stderr)
+    sanitized = _CREDENTIAL_PATTERNS.sub(r"\1=[REDACTED]", sanitized)
+    return sanitized
 
 
 class HimalayaError(Exception):
@@ -78,8 +92,11 @@ def run(
 
     if result.returncode != 0:
         stderr = result.stderr.strip()
-        logger.error("[run] stderr: %s", stderr[:500])
-        raise HimalayaError(f"himalaya error: {stderr}")
+        sanitized = _sanitize_stderr(stderr)
+        first_line = sanitized.split("\n", 1)[0]
+        logger.error("[run] error: %s", first_line)
+        logger.debug("[run] full stderr: %s", sanitized[:500])
+        raise HimalayaError(f"himalaya error: {_sanitize_stderr(stderr)}")
 
     stdout = result.stdout.strip()
 
@@ -135,7 +152,10 @@ def run_raw(*args: str, stdin_data: str | None = None, timeout: int = 30) -> str
 
     if result.returncode != 0:
         stderr = result.stderr.strip()
-        logger.error("[run_raw] stderr: %s", stderr[:500])
-        raise HimalayaError(f"himalaya error: {stderr}")
+        sanitized = _sanitize_stderr(stderr)
+        first_line = sanitized.split("\n", 1)[0]
+        logger.error("[run_raw] error: %s", first_line)
+        logger.debug("[run_raw] full stderr: %s", sanitized[:500])
+        raise HimalayaError(f"himalaya error: {_sanitize_stderr(stderr)}")
 
     return result.stdout.strip()
