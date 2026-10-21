@@ -11,7 +11,7 @@ async def folder_list(account: str | None = None) -> str:
         account: Account name. If omitted, uses the default account.
     """
     account = validate_account(account)
-    result = cli.run("folder", "list", account=account)
+    result = cli.run("mailbox", "list", account=account)
     return json.dumps(result, indent=2) if not isinstance(result, str) else result
 
 

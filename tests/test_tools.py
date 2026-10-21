@@ -80,10 +80,10 @@ class TestEnvelopeTools:
 
         mock_subprocess.return_value = make_completed_process(stdout=json.dumps([]))
 
-        await envelope_list(query="from:test@test.com")
+        await envelope_list(query="from test@test.com")
         cmd = mock_subprocess.call_args[0][0]
-        assert "--" in cmd
-        assert "from:test@test.com" in cmd
+        assert cmd[2:4] == ["envelope", "search"]
+        assert "from test@test.com" in cmd
 
     @pytest.mark.asyncio
     async def test_envelope_thread(self, mock_subprocess, mock_which):
@@ -125,7 +125,7 @@ class TestMessageTools:
 
         await message_read("1", headers=True)
         cmd = mock_subprocess.call_args[0][0]
-        assert "--headers" in cmd
+        assert "--headers" not in cmd
 
     @pytest.mark.asyncio
     async def test_message_thread(self, mock_subprocess, mock_which):

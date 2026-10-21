@@ -83,8 +83,9 @@ class TestValidateFlags:
     def test_valid_backslash_prefix(self):
         assert validate_flags("\\seen") == "\\seen"
 
-    def test_valid_custom_flag(self):
-        assert validate_flags("$custom") == "$custom"
+    def test_reject_custom_flag(self):
+        with pytest.raises(HimalayaError, match="Unknown flag"):
+            validate_flags("$custom")
 
     def test_empty(self):
         with pytest.raises(HimalayaError, match="must not be empty"):

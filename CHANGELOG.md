@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Align JSON, mailbox, envelope search, message copy/move/save, and flag arguments with Himalaya 2.2.
+- Omit tools whose commands are unavailable in the installed CLI, including legacy thread and MML commands on 2.2.1.
+- Keep the message-read headers parameter compatible without passing the removed `--headers` flag.
+- Reject flags unsupported by Himalaya 2.2 before invoking the CLI.
+
 ## [0.1.1] - 2026-03-29
 
 ### Fixed
