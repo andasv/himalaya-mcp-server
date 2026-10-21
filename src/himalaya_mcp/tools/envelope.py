@@ -33,7 +33,10 @@ async def envelope_list(
     page = validate_page(page)
     page_size = validate_page_size(page_size)
 
-    args: list[str] = ["envelope", "list"]
+    args: list[str] = [
+        "envelope",
+        "search" if query else "list",
+    ]
     if page is not None:
         args.extend(["--page", str(page)])
     if page_size is not None:

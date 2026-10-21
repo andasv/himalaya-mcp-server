@@ -1,8 +1,11 @@
 import logging
 import os
+from collections.abc import Callable
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from himalaya_mcp import cli
 from himalaya_mcp.tools import (
     account,
     attachment,
@@ -51,46 +54,76 @@ mcp = FastMCP(
     instructions=_server_description,
 )
 
-# --- Read-only tools (always registered) ---
+# Probe help only: unsupported commands must not be advertised to agents.
+_COMMANDS = {
+    "account_list": ("account", "list"),
+    "folder_list": ("mailbox", "list"),
+    "folder_create": ("folder", "create"),
+    "envelope_list": ("envelope", "list"),
+    "envelope_thread": ("envelope", "thread"),
+    "message_thread": ("message", "thread"),
+    "message_save": ("message", "add"),
+}
 
-mcp.tool()(account.account_list)
-mcp.tool()(folder.folder_list)
-mcp.tool()(envelope.envelope_list)
-mcp.tool()(envelope.envelope_thread)
-mcp.tool()(message.message_read)
-mcp.tool()(message.message_thread)
-mcp.tool()(attachment.attachment_download)
-mcp.tool()(template.template_write)
-mcp.tool()(template.template_reply)
-mcp.tool()(template.template_forward)
+
+def _register(func: Callable[..., Any], **kwargs: Any) -> None:
+    command = _COMMANDS.get(func.__name__, tuple(func.__name__.split("_", 1)))
+    if cli.supports(*command):
+        mcp.tool(**kwargs)(func)
+    else:
+        logging.getLogger("himalaya_mcp").warning(
+            "Skipping unsupported tool %s (%s)", func.__name__, " ".join(command)
+        )
+
+
+# --- Read-only tools (when supported by the installed CLI) ---
+
+_register(account.account_list)
+_register(folder.folder_list)
+_register(envelope.envelope_list)
+_register(envelope.envelope_thread)
+_register(message.message_read)
+_register(message.message_thread)
+_register(attachment.attachment_download)
+_register(template.template_write)
+_register(template.template_reply)
+_register(template.template_forward)
 
 # --- Write tools (full and dangerzone modes) ---
 
 if _mode in (Mode.FULL, Mode.DANGERZONE):
-    mcp.tool(
+    _register(
+        folder.folder_create,
         description=f"{DANGER_WRITE} Create a new folder/mailbox.",
-    )(folder.folder_create)
-    mcp.tool(
+    )
+    _register(
+        message.message_copy,
         description=f"{DANGER_WRITE} Copy a message to another folder.",
-    )(message.message_copy)
-    mcp.tool(
+    )
+    _register(
+        message.message_move,
         description=f"{DANGER_WRITE} Move a message to another folder.",
-    )(message.message_move)
-    mcp.tool(
+    )
+    _register(
+        message.message_save,
         description=f"{DANGER_WRITE} Save a raw MIME message to a folder.",
-    )(message.message_save)
-    mcp.tool(
+    )
+    _register(
+        flag.flag_add,
         description=f"{DANGER_WRITE} Add flags to a message (e.g. seen, flagged).",
-    )(flag.flag_add)
-    mcp.tool(
+    )
+    _register(
+        flag.flag_set,
         description=f"{DANGER_WRITE} Replace all flags on a message.",
-    )(flag.flag_set)
-    mcp.tool(
+    )
+    _register(
+        flag.flag_remove,
         description=f"{DANGER_WRITE} Remove flags from a message.",
-    )(flag.flag_remove)
-    mcp.tool(
+    )
+    _register(
+        template.template_save,
         description=f"{DANGER_WRITE} Compile an MML template and save to a folder (e.g. Drafts).",
-    )(template.template_save)
+    )
 
 # --- Send tools (dangerzone mode only) ---
 
@@ -101,18 +134,20 @@ _SEND_CONFIRMATION_PROMPT = (
 )
 
 if _mode == Mode.DANGERZONE:
-    mcp.tool(
+    _register(
+        message.message_send,
         description=(
             f"{DANGER_SEND} Send a raw MIME message."
             " This sends a real email to real recipients. IRREVERSIBLE." + _SEND_CONFIRMATION_PROMPT
         ),
-    )(message.message_send)
-    mcp.tool(
+    )
+    _register(
+        template.template_send,
         description=(
             f"{DANGER_SEND} Compile an MML template and SEND the email."
             " This sends a real email to real recipients. IRREVERSIBLE." + _SEND_CONFIRMATION_PROMPT
         ),
-    )(template.template_send)
+    )
 
 
 def main() -> None:

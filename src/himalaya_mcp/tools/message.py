@@ -20,13 +20,13 @@ async def message_read(
 ) -> str:
     """Read a message by its envelope ID.
 
-    Returns the plain text body of the message by default.
+    Returns the parsed message as JSON by default.
 
     Args:
         envelope_id: The envelope/message ID to read.
         folder: Folder name. Defaults to INBOX.
         account: Account name. If omitted, uses the default account.
-        headers: If True, include message headers.
+        headers: Retained for compatibility; Himalaya 2.2 always includes headers.
         raw: If True, return raw MIME content.
     """
     envelope_id = validate_envelope_id(envelope_id)
@@ -34,8 +34,7 @@ async def message_read(
     account = validate_account(account)
 
     args: list[str] = ["message", "read"]
-    if headers:
-        args.append("--headers")
+    # Himalaya 2.2 includes headers in the parsed message by default.
     if raw:
         args.append("--raw")
     args.append(envelope_id)
@@ -91,9 +90,11 @@ async def message_copy(
         "message",
         "copy",
         envelope_id,
+        "--to",
         target_folder,
+        "--from",
+        folder or "INBOX",
         account=account,
-        folder=folder,
         output_json=False,
     )
     return result or f"Message {envelope_id} copied to '{target_folder}'."
@@ -124,9 +125,11 @@ async def message_move(
         "message",
         "move",
         envelope_id,
+        "--to",
         target_folder,
+        "--from",
+        folder or "INBOX",
         account=account,
-        folder=folder,
         output_json=False,
     )
     return result or f"Message {envelope_id} moved to '{target_folder}'."
@@ -148,11 +151,9 @@ async def message_save(
     folder = validate_folder_name(folder) if folder else None
     account = validate_account(account)
 
-    args: list[str] = ["message", "save"]
+    args: list[str] = ["message", "add", "--mailbox", folder or "INBOX"]
     if account:
         args.extend(["--account", account])
-    if folder:
-        args.extend(["--folder", folder])
 
     result = cli.run_raw(*args, stdin_data=raw_message)
     return result or "Message saved."

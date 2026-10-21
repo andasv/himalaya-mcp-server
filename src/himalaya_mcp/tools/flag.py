@@ -15,7 +15,7 @@ async def flag_add(
 ) -> str:
     """Add flags to a message.
 
-    Common flags: seen, answered, flagged, deleted, draft.
+    Common flags: seen, answered, flagged, draft.
 
     Args:
         envelope_id: The envelope/message ID.
@@ -32,7 +32,7 @@ async def flag_add(
         "flag",
         "add",
         envelope_id,
-        flags,
+        *(arg for flag in flags.split() for arg in ("--flag", flag.lower().lstrip("\\"))),
         account=account,
         folder=folder,
         output_json=False,
@@ -49,7 +49,7 @@ async def flag_set(
     """Replace all flags on a message.
 
     This replaces all existing flags with the specified ones.
-    Common flags: seen, answered, flagged, deleted, draft.
+    Common flags: seen, answered, flagged, draft.
 
     Args:
         envelope_id: The envelope/message ID.
@@ -66,7 +66,7 @@ async def flag_set(
         "flag",
         "set",
         envelope_id,
-        flags,
+        *(arg for flag in flags.split() for arg in ("--flag", flag.lower().lstrip("\\"))),
         account=account,
         folder=folder,
         output_json=False,
@@ -82,7 +82,7 @@ async def flag_remove(
 ) -> str:
     """Remove flags from a message.
 
-    Common flags: seen, answered, flagged, deleted, draft.
+    Common flags: seen, answered, flagged, draft.
 
     Args:
         envelope_id: The envelope/message ID.
@@ -99,7 +99,7 @@ async def flag_remove(
         "flag",
         "remove",
         envelope_id,
-        flags,
+        *(arg for flag in flags.split() for arg in ("--flag", flag.lower().lstrip("\\"))),
         account=account,
         folder=folder,
         output_json=False,

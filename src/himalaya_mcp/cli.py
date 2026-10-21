@@ -46,8 +46,8 @@ def run(
     Args:
         *args: Command and subcommand arguments (e.g., "account", "list").
         account: Optional account name to use (--account).
-        folder: Optional folder name to use (--folder).
-        output_json: If True, pass --output json and parse the result.
+        folder: Optional mailbox name to use (--mailbox).
+        output_json: If True, pass --json and parse the result.
 
     Returns:
         Parsed JSON (dict or list) if output_json is True, otherwise raw stdout string.
@@ -59,14 +59,15 @@ def run(
     cmd: list[str] = [binary]
 
     if output_json:
-        cmd.extend(["--output", "json"])
-
-    cmd.extend(args)
+        cmd.append("--json")
 
     if account:
         cmd.extend(["--account", account])
+
+    cmd.extend(args[:2])
     if folder:
-        cmd.extend(["--folder", folder])
+        cmd.extend(["--mailbox", folder])
+    cmd.extend(args[2:])
 
     cmd_str = " ".join(args)
     logger.info("[run] starting: %s", cmd_str)
@@ -91,7 +92,7 @@ def run(
     logger.info("[run] finished in %.1fs (rc=%d): %s", elapsed, result.returncode, cmd_str)
 
     if result.returncode != 0:
-        stderr = result.stderr.strip()
+        stderr = result.stderr.strip() or result.stdout.strip() or "Command failed without output."
         sanitized = _sanitize_stderr(stderr)
         first_line = sanitized.split("\n", 1)[0]
         logger.error("[run] error: %s", first_line)
@@ -151,7 +152,7 @@ def run_raw(*args: str, stdin_data: str | None = None, timeout: int = 30) -> str
     logger.info("[run_raw] finished in %.1fs (rc=%d): %s", elapsed, result.returncode, cmd_str)
 
     if result.returncode != 0:
-        stderr = result.stderr.strip()
+        stderr = result.stderr.strip() or result.stdout.strip() or "Command failed without output."
         sanitized = _sanitize_stderr(stderr)
         first_line = sanitized.split("\n", 1)[0]
         logger.error("[run_raw] error: %s", first_line)
@@ -159,3 +160,17 @@ def run_raw(*args: str, stdin_data: str | None = None, timeout: int = 30) -> str
         raise HimalayaError(f"himalaya error: {_sanitize_stderr(stderr)}")
 
     return result.stdout.strip()
+
+
+def supports(*args: str) -> bool:
+    """Check command availability without accessing or modifying mailbox data."""
+    try:
+        result = subprocess.run(
+            [_find_binary(), *args, "--help"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (HimalayaError, OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0

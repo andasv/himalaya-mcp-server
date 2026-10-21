@@ -17,7 +17,7 @@ class TestRun:
         assert result == [{"name": "default"}]
         mock_subprocess.assert_called_once()
         cmd = mock_subprocess.call_args[0][0]
-        assert cmd == ["/usr/local/bin/himalaya", "--output", "json", "account", "list"]
+        assert cmd == ["/usr/local/bin/himalaya", "--json", "account", "list"]
 
     def test_with_account(self, mock_subprocess, mock_which):
         mock_subprocess.return_value = make_completed_process(stdout=json.dumps([]))
@@ -30,7 +30,7 @@ class TestRun:
         mock_subprocess.return_value = make_completed_process(stdout=json.dumps([]))
         run("envelope", "list", folder="INBOX")
         cmd = mock_subprocess.call_args[0][0]
-        assert "--folder" in cmd
+        assert "--mailbox" in cmd
         assert "INBOX" in cmd
 
     def test_no_json_output(self, mock_subprocess, mock_which):
@@ -38,7 +38,7 @@ class TestRun:
         result = run("folder", "create", "Test", output_json=False)
         assert result == "OK"
         cmd = mock_subprocess.call_args[0][0]
-        assert "--output" not in cmd
+        assert "--json" not in cmd
 
     def test_nonzero_exit_code(self, mock_subprocess, mock_which):
         mock_subprocess.return_value = make_completed_process(
@@ -46,6 +46,13 @@ class TestRun:
         )
         with pytest.raises(HimalayaError, match="connection refused"):
             run("account", "list")
+
+    def test_json_error_on_stdout(self, mock_subprocess, mock_which):
+        mock_subprocess.return_value = make_completed_process(
+            returncode=1, stdout='{"message":"backend unavailable"}'
+        )
+        with pytest.raises(HimalayaError, match="backend unavailable"):
+            run("envelope", "list")
 
     def test_malformed_json(self, mock_subprocess, mock_which):
         mock_subprocess.return_value = make_completed_process(stdout="not json{{{")

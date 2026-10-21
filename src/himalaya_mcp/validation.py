@@ -16,12 +16,10 @@ VALID_FLAGS = frozenset(
         "seen",
         "answered",
         "flagged",
-        "deleted",
         "draft",
         "\\seen",
         "\\answered",
         "\\flagged",
-        "\\deleted",
         "\\draft",
     }
 )
@@ -60,11 +58,11 @@ def validate_flags(flags: str) -> str:
         raise HimalayaError("Flags must not be empty.")
     flag_list = flags.split()
     for f in flag_list:
-        if f.lower() not in VALID_FLAGS and not f.startswith("$"):
+        if f.lower() not in VALID_FLAGS:
             raise HimalayaError(
                 f"Unknown flag: {f!r}. "
                 f"Known flags: {', '.join(sorted(VALID_FLAGS))}. "
-                "Custom flags must start with '$'."
+                "Himalaya 2.2 supports seen, answered, flagged, and draft."
             )
     return flags
 

@@ -17,7 +17,7 @@ MCP server that exposes email operations to AI agents (Claude Cowork, Claude Cod
 
 1. **Python 3.12+**
 2. **[uv](https://docs.astral.sh/uv/)** — install with `brew install uv` (macOS) or see [uv docs](https://docs.astral.sh/uv/getting-started/installation/)
-3. **[himalaya](https://github.com/pimalaya/himalaya)** — installed and configured with at least one email account
+3. **[himalaya](https://github.com/pimalaya/himalaya) 2.2.x** — installed and configured with at least one email account
 
 Verify himalaya is working:
 
@@ -129,7 +129,17 @@ claude mcp add --env HIMALAYA_MODE=dangerzone --env APPROVED_RECIPIENTS=alice@ex
 
 ## Available Tools
 
-### Read-only tools (always available)
+Tool registration checks the installed CLI with `--help`. Commands absent from that
+binary are omitted, with a warning in the server log. Restart the MCP server after
+updating the CLI or this package.
+
+With Himalaya 2.2.1, thread tools, `folder_create`, and all `template_*` tools are
+unavailable because their CLI commands were removed. Compose RFC 5322/MIME content
+and use `message_save` or `message_send` instead. MML must be compiled externally.
+The template workflow below applies only when the installed CLI supports it.
+Search queries use expressions such as `from alice@example.com`, not `from:alice@example.com`.
+
+### Read-only tools (when supported)
 
 | Tool | Description |
 |------|-------------|

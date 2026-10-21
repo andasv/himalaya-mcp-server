@@ -4,6 +4,13 @@ from unittest.mock import patch
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def supported_commands():
+    # Mode tests are independent of the installed CLI and its capabilities.
+    with patch("himalaya_mcp.cli.supports", return_value=True):
+        yield
+
+
 class TestServerModes:
     def test_readonly_mode_registers_only_read_tools(self):
         with patch.dict(os.environ, {"HIMALAYA_MODE": "readonly"}, clear=False):
